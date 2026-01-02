@@ -91,15 +91,18 @@ exports.register = asyncHandler(async (req, res) => {
   try {
     await user.save();
 
+    // Send verification email in background (don't block registration)
     const verifyURL = `${env.CLIENT_ORIGIN}/verify-email/${verifyToken}`;
-    await transporter.sendMail({
+    transporter.sendMail({
       from: env.EMAIL_FROM,
       to: user.email,
       subject: 'Jaguza Email Verification',
       html: `<p>Hi ${user.name}, verify your email by clicking <a href="${verifyURL}">here</a>.</p>`,
+    }).catch(emailErr => {
+      console.error('Failed to send verification email:', emailErr.message);
     });
 
-    res.status(201).json({ message: 'Registration successful. Check your email to verify.', clientId: user.clientId });
+    res.status(201).json({ message: 'Registration successful! You can now login.', clientId: user.clientId });
   } catch (err) {
     console.error('Registration error:', err);
     res.status(500).json({ message: 'Internal server error' });
@@ -194,9 +197,10 @@ exports.login = asyncHandler(async (req, res) => {
     return res.status(403).json({ message: 'Account is disabled' });
   }
 
-  if (!user.isVerified) {
-    return res.status(403).json({ message: 'Please verify your email before logging in' });
-  }
+  // Email verification is optional - users can login without verifying
+  // if (!user.isVerified) {
+  //   return res.status(403).json({ message: 'Please verify your email before logging in' });
+  // }
 
   // Reset failed login attempts on successful login
   await user.resetLoginAttempts();
