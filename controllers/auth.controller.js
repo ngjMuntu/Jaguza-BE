@@ -23,6 +23,9 @@ const REFRESH_COOKIE_OPTIONS = {
   path: '/api/auth',
   maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
 };
+// Clear cookie options must match the set options
+const CLEAR_ACCESS_COOKIE_OPTIONS = { path: '/', sameSite: isProduction ? 'none' : 'strict', secure: isProduction };
+const CLEAR_REFRESH_COOKIE_OPTIONS = { path: '/api/auth', sameSite: isProduction ? 'none' : 'strict', secure: isProduction };
 
 // Helper: Generate JWT
 const generateAccessToken = (id, role) => {
@@ -270,7 +273,7 @@ exports.resetPassword = asyncHandler(async (req, res) => {
     { user: user._id, revokedAt: { $exists: false } },
     { $set: { revokedAt: new Date(), revokedReason: 'password_reset', revokedByIp: ipFromReq(req) } }
   );
-  res.clearCookie('refreshToken', { path: '/api/auth' });
+  res.clearCookie('refreshToken', CLEAR_REFRESH_COOKIE_OPTIONS);
   res.json({ message: 'Password has been reset' });
 });
 
@@ -299,7 +302,7 @@ exports.updateProfile = asyncHandler(async (req, res) => {
       { user: user._id, revokedAt: { $exists: false } },
       { $set: { revokedAt: new Date(), revokedReason: 'password_change', revokedByIp: ipFromReq(req) } }
     );
-    res.clearCookie('refreshToken', { path: '/api/auth' });
+    res.clearCookie('refreshToken', CLEAR_REFRESH_COOKIE_OPTIONS);
   }
 
   res.json({
@@ -314,8 +317,9 @@ exports.updateProfile = asyncHandler(async (req, res) => {
 exports.logout = asyncHandler(async (req, res) => {
   // Clear cookies and revoke the presented refresh token (if any).
   const rt = req.cookies.refreshToken;
-  res.clearCookie('token', { path: '/' });
-  res.clearCookie('refreshToken', { path: '/api/auth' });
+  // Must include sameSite/secure options matching how cookies were set
+  res.clearCookie('token', CLEAR_ACCESS_COOKIE_OPTIONS);
+  res.clearCookie('refreshToken', CLEAR_REFRESH_COOKIE_OPTIONS);
 
   if (rt) {
     try {
@@ -347,8 +351,8 @@ exports.refresh = asyncHandler(async (req, res) => {
         { user: user._id, revokedAt: { $exists: false } },
         { $set: { revokedAt: new Date(), revokedReason: 'user_disabled', revokedByIp: ipFromReq(req) } }
       );
-      res.clearCookie('token', { path: '/' });
-      res.clearCookie('refreshToken', { path: '/api/auth' });
+      res.clearCookie('token', CLEAR_ACCESS_COOKIE_OPTIONS);
+      res.clearCookie('refreshToken', CLEAR_REFRESH_COOKIE_OPTIONS);
       return res.status(403).json({ message: 'Account is disabled' });
     }
 
@@ -365,8 +369,8 @@ exports.refresh = asyncHandler(async (req, res) => {
         reason: 'reuse_detected',
         revokedByIp: ipFromReq(req),
       });
-      res.clearCookie('token', { path: '/' });
-      res.clearCookie('refreshToken', { path: '/api/auth' });
+      res.clearCookie('token', CLEAR_ACCESS_COOKIE_OPTIONS);
+      res.clearCookie('refreshToken', CLEAR_REFRESH_COOKIE_OPTIONS);
       return res.status(401).json({ message: 'Refresh token invalid' });
     }
 
