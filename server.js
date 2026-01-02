@@ -156,8 +156,8 @@ const csrfExcludedPaths = ['/webhook/stripe'];
 const isProduction = env.NODE_ENV === 'production';
 const { doubleCsrfProtection, generateCsrfToken } = doubleCsrf({
   getSecret: () => env.REFRESH_TOKEN_SECRET || env.JWT_SECRET,
-  // For stateless apps, use a fixed identifier or derive from request
-  getSessionIdentifier: (req) => req.ip || 'anonymous',
+  // Use a constant identifier for stateless/cross-origin apps (IP changes with proxies/Cloudflare)
+  getSessionIdentifier: () => 'jaguza-stateless-session',
   cookieName: 'jaguza_csrf',
   cookieOptions: {
     httpOnly: true,
