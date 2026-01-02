@@ -6,17 +6,19 @@ const RefreshToken = require('../models/refreshToken.model');
 const transporter = require('../config/email.config');
 const { env } = require('../config/env');
 
+// For cross-origin (Netlify ↔ Render), use sameSite: 'none' + secure: true in production
+const isProduction = env.NODE_ENV === 'production';
 const ACCESS_COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: env.NODE_ENV === 'production',
-  sameSite: 'strict',
+  secure: isProduction,
+  sameSite: isProduction ? 'none' : 'strict',
   path: '/',
   maxAge: 15 * 60 * 1000, // 15 minutes
 };
 const REFRESH_COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: env.NODE_ENV === 'production',
-  sameSite: 'strict',
+  secure: isProduction,
+  sameSite: isProduction ? 'none' : 'strict',
   // Must be available to both /refresh and /logout.
   path: '/api/auth',
   maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days

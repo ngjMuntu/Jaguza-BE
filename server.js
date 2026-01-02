@@ -152,6 +152,8 @@ app.get('/health', (req, res) => res.json({ status: 'ok', uptime: process.uptime
 // - Token endpoint: GET /api/csrf-token -> { csrfToken }
 // - Client sends header: X-CSRF-Token: <token>
 const csrfExcludedPaths = ['/webhook/stripe'];
+// In production with cross-origin (Netlify ↔ Render), use sameSite: 'none' + secure: true
+const isProduction = env.NODE_ENV === 'production';
 const { doubleCsrfProtection, generateCsrfToken } = doubleCsrf({
   getSecret: () => env.REFRESH_TOKEN_SECRET || env.JWT_SECRET,
   // For stateless apps, use a fixed identifier or derive from request
@@ -159,8 +161,8 @@ const { doubleCsrfProtection, generateCsrfToken } = doubleCsrf({
   cookieName: 'jaguza_csrf',
   cookieOptions: {
     httpOnly: true,
-    sameSite: 'strict',
-    secure: env.NODE_ENV === 'production',
+    sameSite: isProduction ? 'none' : 'strict',  // 'none' for cross-origin in production
+    secure: isProduction,  // Required when sameSite is 'none'
     path: '/',
   },
   getCsrfTokenFromRequest: (req) => req.get('X-CSRF-Token'),
